@@ -6,3 +6,4 @@ sqlalchemy
 openai
 scikit-learn
 requests
+matplotlib
