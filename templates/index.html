@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Maintenance IA</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>🔧 IA de Maintenance Industrielle</h1>
+
+    <div class="card">
+
+        <p>Équipement</p>
+        <input id="equipment">
+
+        <p>Historique des pannes</p>
+        <textarea id="history"></textarea>
+
+        <p>Diagnostic actuel</p>
+        <textarea id="diagnosis"></textarea>
+
+        <button onclick="analyze()">
+            Analyser avec IA
+        </button>
+
+    </div>
+
+    <div class="result-card">
+
+        <h2>📊 Résultat Analyse</h2>
+
+        <pre id="result"></pre>
+
+    </div>
+
+</div>
+
+<script>
+
+async function analyze() {
+
+    const res = await fetch("/analyze", {
+
+        method: "POST",
+
+        headers: {
+            "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify({
+            equipment: document.getElementById("equipment").value,
+            history: document.getElementById("history").value,
+            diagnosis: document.getElementById("diagnosis").value
+        })
+
+    });
+
+    const data = await res.json();
+
+    document.getElementById("result").innerText = data.result;
+}
+
+</script>
+
+</body>
+</html>
