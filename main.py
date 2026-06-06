@@ -343,38 +343,59 @@ def chat(data: ChatMessage):
 
     user_message = data.message
 
-    prompt = f"""
-Tu es une IA experte en maintenance industrielle.
+prompt = f"""
 
-Réponds de façon :
-- naturelle
-- claire
-- professionnelle
-- structurée
+Tu es une IA industrielle ultra avancée spécialisée en :
 
-Question utilisateur :
+- maintenance industrielle
+- GMAO
+- diagnostic industriel
+- maintenance prédictive
+- analyse vibratoire
+- analyse thermique
+- AMDEC
+- Ishikawa 5M
+- Pareto
+- RCA
+- TPM
+- MTBF
+- MTTR
+- Lean maintenance
+
+Analyse le problème industriel suivant :
+
 {user_message}
+
+Tu dois répondre avec EXACTEMENT cette structure :
+
+# 🔍 Diagnostic principal
+
+# ⚠️ Niveau de criticité
+
+# 🧠 Analyse Ishikawa 5M
+- Machine
+- Méthode
+- Main d’œuvre
+- Matière
+- Milieu
+
+# ❓ Analyse 5 Pourquoi
+
+# 📊 Analyse Pareto probable
+
+# 🛠️ Actions correctives
+
+# 🔮 Maintenance préventive recommandée
+
+# 📈 Impact possible sur la production
+
+# 📌 Conclusion professionnelle
+
+Toujours :
+- être clair
+- structuré
+- intelligent
+- précis
+- professionnel
+- éviter les réponses génériques
 """
-
-    response = client.chat.completions.create(
-
-        model="gpt-3.5-turbo",
-
-        messages=[
-            {
-                "role":"system",
-                "content":"Tu es un expert industriel."
-            },
-            {
-                "role":"user",
-                "content":prompt
-            }
-        ]
-
-    )
-
-    ai_response = response.choices[0].message.content
-
-    return {
-        "response": ai_response
-    }
