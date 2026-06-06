@@ -1,3 +1,5 @@
+from starlette.middleware.sessions import SessionMiddleware
+from fastapi.responses import RedirectResponse
 import requests
 from sklearn.tree import DecisionTreeClassifier
 import matplotlib.pyplot as plt
@@ -12,6 +14,8 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 app = FastAPI()
+
+app.add_middleware(SessionMiddleware, secret_key="maintenance_secret")
 
 TELEGRAM_TOKEN = "8718574523:AAH1gJwWKb7XjTqP0pBS7hq6qwLtzPrlS5k"
 
@@ -80,6 +84,8 @@ class Data(BaseModel):
 
 # ---------------- ROUTE HOME ----------------
 @app.get("/")
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
 def home(request: Request):
     return templates.TemplateResponse(
         request=request,
@@ -290,3 +296,19 @@ def history(request: Request):
             "high_criticality": high_criticality
         }
     )
+
+@app.get("/login")
+def login_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+
+@app.post("/login")
+def login(request: Request, username: str = Form(...), password: str = Form(...)):
+
+    if username == "admin" and password == "admin123":
+
+        request.session["user"] = username
+
+        return RedirectResponse("/", status_code=302)
+
+    return {"error": "Identifiants incorrects"}
