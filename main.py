@@ -1,3 +1,5 @@
+from reportlab.pdfgen import canvas
+from fastapi.responses import FileResponse
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.responses import RedirectResponse
 import requests
@@ -312,3 +314,22 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
         return RedirectResponse("/", status_code=302)
 
     return {"error": "Identifiants incorrects"}
+
+@app.get("/generate-pdf")
+def generate_pdf():
+
+    pdf_path = "rapport_maintenance.pdf"
+
+    c = canvas.Canvas(pdf_path)
+
+    c.drawString(100, 800, "RAPPORT IA MAINTENANCE")
+
+    c.drawString(100, 760, "Système : Maintenance prédictive")
+
+    c.drawString(100, 720, "Statut : Surveillance active")
+
+    c.drawString(100, 680, "Alerte : Niveau critique détecté")
+
+    c.save()
+
+    return FileResponse(pdf_path, media_type='application/pdf', filename="rapport.pdf")
