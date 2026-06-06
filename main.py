@@ -1,3 +1,4 @@
+from pydantic import BaseModel
 from reportlab.pdfgen import canvas
 from fastapi.responses import FileResponse
 from starlette.middleware.sessions import SessionMiddleware
@@ -16,6 +17,9 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 app = FastAPI()
+
+class ChatMessage(BaseModel):
+    message: str
 
 app.add_middleware(SessionMiddleware, secret_key="maintenance_secret")
 
@@ -333,3 +337,44 @@ def generate_pdf():
     c.save()
 
     return FileResponse(pdf_path, media_type='application/pdf', filename="rapport.pdf")
+
+@app.post("/chat")
+def chat(data: ChatMessage):
+
+    user_message = data.message
+
+    prompt = f"""
+Tu es une IA experte en maintenance industrielle.
+
+Réponds de façon :
+- naturelle
+- claire
+- professionnelle
+- structurée
+
+Question utilisateur :
+{user_message}
+"""
+
+    response = client.chat.completions.create(
+
+        model="gpt-3.5-turbo",
+
+        messages=[
+            {
+                "role":"system",
+                "content":"Tu es un expert industriel."
+            },
+            {
+                "role":"user",
+                "content":prompt
+            }
+        ]
+
+    )
+
+    ai_response = response.choices[0].message.content
+
+    return {
+        "response": ai_response
+    }
