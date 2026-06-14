@@ -1,19 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Connexion</title>
+    <title>Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
 
-<h1>Connexion Maintenance IA</h1>
+<body class="flex justify-center items-center h-screen bg-gray-100">
 
-<form action="/login" method="post">
+<form method="post" class="bg-white p-6 rounded shadow">
 
-    <input type="text" name="username" placeholder="Nom utilisateur">
+    <h1 class="text-xl mb-4">Connexion</h1>
 
-    <input type="password" name="password" placeholder="Mot de passe">
+    <input name="username" placeholder="Username" class="border p-2 mb-2 w-full">
 
-    <button type="submit">Connexion</button>
+    <input name="password" type="password" placeholder="Password" class="border p-2 mb-2 w-full">
+
+    <button class="bg-blue-500 text-white p-2 w-full">Login</button>
 
 </form>
 

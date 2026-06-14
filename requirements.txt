@@ -1,9 +1,6 @@
 fastapi
 uvicorn
+sqlalchemy
 jinja2
 python-multipart
-sqlalchemy
-openai
-scikit-learn
-requests
-matplotlib
+psycopg2-binary

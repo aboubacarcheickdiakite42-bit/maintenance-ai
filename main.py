@@ -1,401 +1,65 @@
-from pydantic import BaseModel
-from reportlab.pdfgen import canvas
-from fastapi.responses import FileResponse
-from starlette.middleware.sessions import SessionMiddleware
-from fastapi.responses import RedirectResponse
-import requests
-from sklearn.tree import DecisionTreeClassifier
-import matplotlib.pyplot as plt
-import os
-from fastapi import FastAPI, Request
-from fastapi.templating import Jinja2Templates
+from fastapi import FastAPI, Request, Form
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from fastapi.templating import Jinja2Templates
 
-from sqlalchemy import create_engine, Column, Integer, String
-from sqlalchemy.orm import declarative_base
-from sqlalchemy.orm import sessionmaker
+from starlette.middleware.sessions import SessionMiddleware
+
+from database.db import SessionLocal, engine, Base
+from database.models import User, Equipment
+from core.ai import industrial_ai
 
 app = FastAPI()
 
-class ChatMessage(BaseModel):
-    message: str
+app.add_middleware(
+    SessionMiddleware,
+    secret_key="maintenance-secret"
+)
 
-app.add_middleware(SessionMiddleware, secret_key="maintenance_secret")
-
-TELEGRAM_TOKEN = "8718574523:AAH1gJwWKb7XjTqP0pBS7hq6qwLtzPrlS5k"
-
-CHAT_ID = "5650384416"
-
-templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# ---------------- DATABASE ----------------
-DATABASE_URL = "sqlite:///maintenance.db"
-
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-
-SessionLocal = sessionmaker(bind=engine)
-
-Base = declarative_base()
-
-class MaintenanceRecord(Base):
-    __tablename__ = "maintenance"
-
-    id = Column(Integer, primary_key=True, index=True)
-    equipment = Column(String)
-    history = Column(String)
-    diagnosis = Column(String)
-    result = Column(String)
+templates = Jinja2Templates(directory="templates")
 
 Base.metadata.create_all(bind=engine)
 
-# ---------------- MACHINE LEARNING ----------------
 
-X = [
-    [60, 5, 3],
-    [70, 8, 4],
-    [90, 15, 6],
-    [95, 18, 7]
-]
-
-y = [
-    0,
-    1,
-    2,
-    2
-]
-
-model = DecisionTreeClassifier()
-
-model.fit(X, y)
-
-# ---------------- TELEGRAM ALERT ----------------
-
-def send_telegram_alert(message):
-
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-
-    data = {
-        "chat_id": CHAT_ID,
-        "text": message
-    }
-
-    requests.post(url, data=data)
-# ---------------- INPUT MODEL ----------------
-class Data(BaseModel):
-    equipment: str
-    history: str
-    diagnosis: str
-
-# ---------------- ROUTE HOME ----------------
-@app.get("/")
-    if not request.session.get("user"):
-        return RedirectResponse("/login", status_code=302)
-def home(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="index.html"
-    )
-
-# ---------------- ANALYSE IA + SAUVEGARDE ----------------
-@app.post("/analyze")
-def analyze(data: Data):
-
-    history = data.history.lower()
-    diagnosis = data.diagnosis.lower()
-
-    temperature = 78
-
-    vibration_level = 12
-
-    pressure = 5.4
-
-    criticity = "Faible"
-    maintenance = "Préventive"
-    risk = "Bas"
-
-    if "surchauffe" in diagnosis:
-        criticity = "Élevée"
-        risk = "Important"
-
-    if "vibration" in history:
-        maintenance = "Prédictive"
-
-    if "fuite" in history:
-        criticity = "Moyenne"
-
-    if "bruit" in history:
-        risk = "Moyen"
-
-    mtbf = 120
-
-    mttr = 4
-
-    availability = ((mtbf - mttr) / mtbf) * 100
-
-    health_score = 85
-
-    risk_score = 20
-
-    if "vibration" in history:
-        risk_score += 25
-
-    if "surchauffe" in diagnosis:
-        risk_score += 35
-
-    if "fuite" in history:
-        risk_score += 15
-
-    if "bruit" in history:
-        risk_score += 10
-
-    if risk_score >= 70:
-        prediction = "RISQUE DE PANNE CRITIQUE"
-
-    elif risk_score >= 40:
-        prediction = "RISQUE DE PANNE MOYEN"
-
-    else:
-        prediction = "RISQUE DE PANNE FAIBLE"
-
-    alert = "Aucune alerte"
-
-    if risk_score >= 70:
-        alert = "🚨 ALERTE : Intervention immédiate recommandée"
-
-        telegram_message = f"""
-🚨 ALERTE MAINTENANCE
-
-Équipement : {data.equipment}
-
-Risque détecté : CRITIQUE
-
-Action recommandée : Intervention immédiate
-"""
-
-        send_telegram_alert(telegram_message)
-
-    prediction_ml = model.predict([[temperature, vibration_level, pressure]])[0]
-
-    ml_result = "FAIBLE"
-
-    if prediction_ml == 1:
-        ml_result = "MOYEN"
-
-    if prediction_ml == 2:
-        ml_result = "CRITIQUE"
-    result = f"""
-=============================
-ANALYSE IA INDUSTRIELLE
-=============================
-
-ÉQUIPEMENT : {data.equipment}
-
-CRITICITÉ : {criticity}
-RISQUE : {risk}
-MAINTENANCE : {maintenance}
-
-MTBF ESTIMÉ : {mtbf} heures
-
-MTTR ESTIMÉ : {mttr} heures
-
-DISPONIBILITÉ : {availability:.2f} %
-
-SCORE SANTÉ MACHINE : {health_score} %S
-
-
-SCORE DE RISQUE : {risk_score} %
-
-PRÉDICTION IA : {prediction}
-
-ALERTE IA : {alert}
-
-
-PRÉDICTION MACHINE LEARNING : {ml_result}
-
-=============================
-
-RECOMMANDATIONS :
-
-- Inspection complète
-- Analyse vibratoire
-- Contrôle thermique
-- Vérification composants
-- Maintenance adaptée
-
-=============================
-"""
-
-    db = SessionLocal()
-
-    new_record = MaintenanceRecord(
-        equipment=data.equipment,
-        history=data.history,
-        diagnosis=data.diagnosis,
-        result=result
-    )
-
-    db.add(new_record)
-    db.commit()
-    db.close()
-
-    return {"result": result}
-
-@app.get("/history")
-def history(request: Request):
-
-    db = SessionLocal()
-
-    records = db.query(MaintenanceRecord).all()
-
-    total_records = len(records)
-
-    equipments = set()
-
-    high_criticality = 0
-
-    for r in records:
-
-        equipments.add(r.equipment)
-
-        if "Élevée" in r.result:
-            high_criticality += 1
-
-    total_equipments = len(equipments)
-
-    labels = ["Criticité élevée", "Autres"]
-
-    values = [
-        high_criticality,
-        total_records - high_criticality
-    ]
-
-    plt.figure(figsize=(5,5))
-
-    plt.pie(values, labels=labels, autopct='%1.1f%%')
-
-    if not os.path.exists("static"):
-        os.makedirs("static")
-
-    plt.savefig("static/chart.png")
-
-    plt.close()
-
-    temperature = 78
-
-    vibration_level = 12
-
-    pressure = 5.4
-
-    db.close()
-
-    return templates.TemplateResponse(
-        request=request,
-        name="history.html",
-        context={            "temperature": temperature,
-            "vibration_level": vibration_level,
-            "pressure": pressure,
-            "records": records,
-            "total_records": total_records,
-            "total_equipments": total_equipments,
-            "high_criticality": high_criticality
-        }
-    )
-
-@app.get("/login")
+@app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse(
+        "login.html",
+        {"request": request}
+    )
 
 
 @app.post("/login")
 def login(request: Request, username: str = Form(...), password: str = Form(...)):
+    db = SessionLocal()
 
-    if username == "admin" and password == "admin123":
+    user = db.query(User).filter_by(
+        username=username,
+        password=password
+    ).first()
 
+    db.close()
+
+    if user:
         request.session["user"] = username
-
         return RedirectResponse("/", status_code=302)
 
-    return {"error": "Identifiants incorrects"}
+    return RedirectResponse("/login", status_code=302)
 
-@app.get("/generate-pdf")
-def generate_pdf():
 
-    pdf_path = "rapport_maintenance.pdf"
+@app.get("/")
+def dashboard(request: Request):
 
-    c = canvas.Canvas(pdf_path)
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
 
-    c.drawString(100, 800, "RAPPORT IA MAINTENANCE")
+    db = SessionLocal()
+    equipments = db.query(Equipment).all()
+    db.close()
 
-    c.drawString(100, 760, "Système : Maintenance prédictive")
-
-    c.drawString(100, 720, "Statut : Surveillance active")
-
-    c.drawString(100, 680, "Alerte : Niveau critique détecté")
-
-    c.save()
-
-    return FileResponse(pdf_path, media_type='application/pdf', filename="rapport.pdf")
-
-@app.post("/chat")
-def chat(data: ChatMessage):
-
-    user_message = data.message
-
-prompt = f"""
-
-Tu es une IA industrielle ultra avancée spécialisée en :
-
-- maintenance industrielle
-- GMAO
-- diagnostic industriel
-- maintenance prédictive
-- analyse vibratoire
-- analyse thermique
-- AMDEC
-- Ishikawa 5M
-- Pareto
-- RCA
-- TPM
-- MTBF
-- MTTR
-- Lean maintenance
-
-Analyse le problème industriel suivant :
-
-{user_message}
-
-Tu dois répondre avec EXACTEMENT cette structure :
-
-# 🔍 Diagnostic principal
-
-# ⚠️ Niveau de criticité
-
-# 🧠 Analyse Ishikawa 5M
-- Machine
-- Méthode
-- Main d’œuvre
-- Matière
-- Milieu
-
-# ❓ Analyse 5 Pourquoi
-
-# 📊 Analyse Pareto probable
-
-# 🛠️ Actions correctives
-
-# 🔮 Maintenance préventive recommandée
-
-# 📈 Impact possible sur la production
-
-# 📌 Conclusion professionnelle
-
-Toujours :
-- être clair
-- structuré
-- intelligent
-- précis
-- professionnel
-- éviter les réponses génériques
-"""
+    return templates.TemplateResponse(
+        "dashboard.html",
+        {"request": request, "equipments": equipments}
+    )
